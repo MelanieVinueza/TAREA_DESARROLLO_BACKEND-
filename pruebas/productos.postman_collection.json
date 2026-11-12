@@ -1,0 +1,774 @@
+{
+  "info": {
+    "name": "Kit de pruebas - API Productos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden, una iteracion. El CRUD crea un producto temporal y elimina solo ese ID. Si se interrumpe, puede quedar el producto temporal. No contiene credenciales."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5050",
+      "type": "string"
+    },
+    {
+      "key": "productoId",
+      "value": "0",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - CRUD completo (ejecutar en orden)",
+      "item": [
+        {
+          "name": "01 - Listar 20 productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos?page=1&limit=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Listado paginado\", function () { const body=pm.response.json(); pm.expect(body.data).to.be.an(\"array\"); pm.expect(body.data.length).to.be.at.most(20); pm.expect(body.pagination.limit).to.equal(20); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Crear producto temporal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"productoId\",\"0\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "if(pm.response.code===201) { pm.collectionVariables.set(\"productoId\",pm.response.json().data.ID); }",
+                  "pm.test(\"ID y precio como cadenas; Location\", function () { const data=pm.response.json().data; pm.expect(data.ID).to.be.a(\"string\"); pm.expect(data.pvp).to.equal(\"19.90\"); pm.expect(pm.response.headers.get(\"Location\")).to.equal(\"/api/v1/productos/\"+data.ID); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - Consultar el producto creado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Es el producto creado\", function () { pm.expect(pm.response.json().data.ID).to.equal(pm.collectionVariables.get(\"productoId\")); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - Reemplazar con PUT",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto reemplazado\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"25.50\",\n  \"stock\": 20\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Reemplazo aplicado\",function(){ const data=pm.response.json().data; pm.expect(data.nombre).to.equal(\"Producto reemplazado\"); pm.expect(data.pvp).to.equal(\"25.50\"); pm.expect(data.stock).to.equal(20); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - Cambiar solo stock con PATCH",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Solo stock cambia\",function(){ const data=pm.response.json().data; pm.expect(data.stock).to.equal(5); pm.expect(data.nombre).to.equal(\"Producto reemplazado\"); pm.expect(data.pvp).to.equal(\"25.50\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 - Eliminar el producto temporal",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\", function () { pm.response.to.have.status(204); });",
+                  "pm.test(\"Sin cuerpo\",function(){pm.expect(pm.response.text()).to.equal(\"\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 - Comprobar que fue eliminado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 - Repetir DELETE devuelve 404",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/{{productoId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 - Errores y validaciones",
+      "item": [
+        {
+          "name": "Precio negativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"-1.00\",\n  \"stock\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Precio con tres decimales",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"1.001\",\n  \"stock\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Precio enviado como numero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": 19.9,\n  \"stock\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock fraccionario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": 1.5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock negativo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": -1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Faltan campos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Incompleto\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID enviado por cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": 10,\n  \"ID\": \"12\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "URL invalida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"archivo.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Campo desconocido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Producto kit de pruebas\",\n  \"descripcion\": \"Creado temporalmente por Postman\",\n  \"URLImagen\": \"https://ejemplo.com/prueba.jpg\",\n  \"pvp\": \"19.90\",\n  \"stock\": 10,\n  \"admin\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON mal formado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nombre\":"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cuerpo como arreglo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Content-Type incorrecto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "texto"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 415\", function () { pm.response.to.have.status(415); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH vacio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT incompleto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/productos/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limite demasiado alto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos?limit=1000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagina cero",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos?page=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID no numerico",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/abc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID fuera de BIGINT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos/9223372036854775808"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Version inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v2/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ruta inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/inexistente"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metodo no permitido",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/productos"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 405\", function () { pm.response.to.have.status(405); });",
+                  "pm.test(\"Error JSON consistente\", function () { const error = pm.response.json().error; pm.expect(error.code).to.be.a(\"string\"); pm.expect(error.message).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
