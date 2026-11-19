@@ -127,3 +127,7 @@ npm.cmd test
 - `producto.postgres.test.js`: al configurar .env, verifica PostgreSQL real y ejecuta CRUD HTTP dentro de una transacción que termina en ROLLBACK. Se omite explícitamente mientras la contraseña sea el valor de ejemplo. Los identificadores de identidad pueden avanzar, aunque los datos se reviertan.
 
 Las pruebas en memoria no verifican la conexión ni la existencia de los 10 000 productos reales. Para eso ejecutar `db:check` y la prueba PostgreSQL después de configurar las credenciales.
+
+## Frontend separado
+
+La interfaz web está en el repositorio público [TAREA_DESARROLLO_FRONTEND](https://github.com/MelanieVinueza/TAREA_DESARROLLO_FRONTEND). Con el backend iniciado, abre el frontend en <http://localhost:5173>; `CORS_ORIGINS` ya permite ese origen por defecto.
