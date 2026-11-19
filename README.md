@@ -132,4 +132,8 @@ Las pruebas en memoria no verifican la conexión ni la existencia de los 10 000 
 
 La interfaz web está en el repositorio público [TAREA_DESARROLLO_FRONTEND](https://github.com/MelanieVinueza/TAREA_DESARROLLO_FRONTEND). Con el backend iniciado, abre el frontend en <http://localhost:5173>; `CORS_ORIGINS` ya permite ese origen por defecto.
 
-El workflow de GitHub Actions ejecuta `npm ci` y `npm test` con Node.js 22 en cada push o pull request a `main`. La prueba que necesita PostgreSQL queda omitida en CI.
+## CI, seguridad y modularidad
+
+En cada push o pull request a `main`, GitHub Actions verifica Node.js 22, 24 y 26, instala las versiones bloqueadas, revisa el árbol de librerías (`npm ls`), ejecuta `npm audit` y busca ciclos entre módulos con Madge. Luego corre las pruebas de API (`npm test`); la prueba que requiere PostgreSQL se omite en CI porque no se guardan credenciales de base de datos allí.
+
+CodeQL analiza JavaScript con consultas `security-extended` en cada cambio y semanalmente. Dependabot revisa semanalmente las dependencias de npm y GitHub Actions. El workflow de CI está en `.github/workflows/ci.yml`.
