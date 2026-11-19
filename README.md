@@ -131,3 +131,5 @@ Las pruebas en memoria no verifican la conexión ni la existencia de los 10 000 
 ## Frontend separado
 
 La interfaz web está en el repositorio público [TAREA_DESARROLLO_FRONTEND](https://github.com/MelanieVinueza/TAREA_DESARROLLO_FRONTEND). Con el backend iniciado, abre el frontend en <http://localhost:5173>; `CORS_ORIGINS` ya permite ese origen por defecto.
+
+El workflow de GitHub Actions ejecuta `npm ci` y `npm test` con Node.js 22 en cada push o pull request a `main`. La prueba que necesita PostgreSQL queda omitida en CI.
