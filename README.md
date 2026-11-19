@@ -7,8 +7,9 @@ API REST para PostgreSQL `bdproductos`, tabla `dbo."Producto"`. Implementa MVC, 
 Desde esta carpeta:
 
 ```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# Editar .env y completar DB_USER y DB_PASSWORD localmente.
 npm.cmd install
-# .env ya está creado. Completar DB_USER y DB_PASSWORD localmente.
 npm.cmd run db:check
 npm.cmd test
 npm.cmd start
